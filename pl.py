@@ -172,16 +172,22 @@ def bmv_basic(n=1000, runs= 100, x=0, mu=0, sigma=1, dt=.1):
         
     return vals
 
-def bmv_general(n=1000, runs=100, x=0, mus=[0, 0], cut=[0, 0], sigmas=[1, 1], dt=.1, dr=0):
+def bmv_general(n=1000, runs=100, x=0, mus=[0, 0], cut=[0, 0], sigmas=[1, 1], dt=.1, dr=0, keepall=True):
     """A general function that simulates Brownian motions in parallel. The brownian motion
        has a range for which agents choose a risky process. This is for values of x in 
        between the upper and lower values in cuts, where the two values of mus and sigmas
        are used (the second applying between the cut points). With this function, we really don't
        need any other heavy machinery as the last column can be used to proxy the long run distribution.
-       Moreover, a death rate of 0, and cut points that are equal simulate the usual BM."""
+       Moreover, a death rate of 0, and cut points that are equal simulate the usual BM.
+       
+       The variable last allows one to just keep the last observation. This way, the process can be left running
+       for a large amount of time without soaking up storage."""
+
     x = np.repeat(0, runs)
     z = np.zeros(runs)
-    vals = np.zeros((runs, n))
+    
+    if keepall: 
+        vals = np.zeros((runs, n))
     
     for k in range(n):
         deaths = (uniform.rvs(size=runs) < dt*dr).astype(int)
@@ -189,8 +195,11 @@ def bmv_general(n=1000, runs=100, x=0, mus=[0, 0], cut=[0, 0], sigmas=[1, 1], dt
         z[inrang] =1
 
         x = ( (1 - deaths) * (x + (mus[0]* (1 - z) + z* mus[1]) * dt) +
-            (1 - deaths) * (sigmas[0]**2 * (1 - z) + z * sigmas[1]**2) * rm.rvs(size=runs) * dt)
+            (1 - deaths) * (sigmas[0]**2 * (1 - z) + z * sigmas[1]**2) * norm.rvs(size=runs) * dt)
+        if keepall:
+            vals[:, k] = x
     
-    vals[:, k] = x
+    if not keepall:
+        vals = x
     
     return vals
